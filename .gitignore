@@ -1,0 +1,40 @@
+# ===========================
+# MATLAB / Octave
+# ===========================
+
+# Workspace salvo automaticamente pelo Octave/MATLAB
+octave-workspace
+*.mat
+*.asv
+
+# Arquivos de histórico do Octave
+.octave_hist
+
+# Arquivos temporários do MATLAB
+*.mex*
+*.mexw64
+*.mexmaci64
+*.mexa64
+
+# Slprj (Simulink)
+slprj/
+
+# ===========================
+# Vídeos de entrada (binários pesados)
+# ===========================
+video_input/
+
+# ===========================
+# Resultados gerados (imagens/plots exportados)
+# ===========================
+# Comentar a linha abaixo se quiser versionar os resultados
+# Resultados/
+
+# ===========================
+# Sistema / IDE
+# ===========================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
