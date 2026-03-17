@@ -1,0 +1,24 @@
+nohup: ignorando entrada
+Carregando vídeo: video_input/Rapido_1_5s.mp4
+Taxa de quadros do vídeo (FPS): 30
+Lendo e pré-processando frames (Redimensionando para 10%)...
+Tamanho da matriz 3D final para cálculo (Y x X x Tempo): 108 x 192 x 150
+Calculando a FFT 3D. Isso pode demorar alguns segundos...
+Extraindo Frequência Fundamental do Tempo...
+-------------------------------------------------------------------------
+ Frequência Fundamental EXTRAÍDA CEGAMENTE PELA FFT 3D: 1.9128 Hz
+-------------------------------------------------------------------------
+Preparando o gráfico 3D...
+libEGL warning: pci id for fd 15: 10de:2489, driver (null)
+
+pci id for fd 16: 10de:2489, driver (null)
+pci id for fd 17: 10de:2489, driver (null)
+libEGL warning: egl: failed to create dri2 screen
+pci id for fd 16: 10de:2489, driver (null)
+pci id for fd 17: 10de:2489, driver (null)
+libEGL warning: egl: failed to create dri2 screen
+Processo finalizado com sucesso! Pressione "Enter" no terminal para fechar o gráfico e sair.
+warning: print: 'gs' (Ghostscript) binary is not available.  Many formats may not be available
+fatal: caught signal Desconexão -- stopping myself...
+attempting to save variables to 'octave-workspace'...
+error: octave_base_value::save_binary(): wrong type argument 'object'

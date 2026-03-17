@@ -9,11 +9,11 @@
 % -------------------------------------------------------------------------
 % 1. PARÂMETROS DO "VÍDEO" (Modifique as variáveis abaixo)
 % -------------------------------------------------------------------------
-dim_altura = 20;             % Altura da imagem em pixels (Ny)
-dim_largura = 20;            % Largura da imagem em pixels (Nx)
+dim_altura = 10;            % Altura da imagem em pixels (Ny)
+dim_largura = 10;           % Largura da imagem em pixels (Nx)
 
 % Padrão de um ciclo único (Ex: Y pretos, Z brancos, W pretos)
-frames_pretos_inicio = 20;   % Quantos frames TOTALMENTE PRETOS rodam antes do flash
+frames_pretos_inicio = 20;  % Quantos frames TOTALMENTE PRETOS rodam antes do flash
 frames_brancos = 1;         % Quantos frames o centro ficará ACESO (Branco)
 frames_pretos_fim = 0;      % Quantos frames TOTALMENTE PRETOS rodam depois do flash
 
@@ -52,7 +52,7 @@ end
 for ciclo = 1:ciclos_totais
     % Calcula onde o ciclo atual começa no tempo global
     offset_ciclo = (ciclo - 1) * frames_por_ciclo;
-    
+
     inicio_do_flash = offset_ciclo + frames_pretos_inicio + 1;
     fim_do_flash = inicio_do_flash + frames_brancos - 1;
 
@@ -69,17 +69,17 @@ disp(['Luz central pulsou ', num2str(ciclos_totais), ' vezes.']);
 if mostrar_frames_gerados
     disp('Gerando preview dos frames (pode demorar um instante se houver muitos)...');
     figure('Name', 'Lista de Frames Gerados', 'Position', [50, 50, 1000, 800]);
-    
+
     % Calcula quantas linhas e colunas precisamos para o mosaico (máximo 10 colunas)
     colunas_mosaic = min(10, total_frames);
     linhas_mosaic = ceil(total_frames / colunas_mosaic);
-    
+
     for f = 1:total_frames
         subplot(linhas_mosaic, colunas_mosaic, f);
-        
+
         % Mostra o frame em preto (0) e branco (255)
-        imshow(video_3d(:,:,f), [0 255]); 
-        
+        imshow(video_3d(:,:,f), [0 255]);
+
         % Coloca o número do frame bem pequeno embaixo
         title(num2str(f), 'FontSize', 8);
     end
@@ -103,11 +103,25 @@ magnitude_log = log10(1 + magnitude);
 disp('Preparando o gráfico 3D...');
 
 % Eixos normalizados e centralizados da FFT (bins reais calculados de acordo com N par ou ímpar)
-if mod(dim_altura, 2) == 0, fy = (-dim_altura/2 : dim_altura/2 - 1) / dim_altura; else, fy = (-(dim_altura-1)/2 : (dim_altura-1)/2) / dim_altura; end
-if mod(dim_largura, 2) == 0, fx = (-dim_largura/2 : dim_largura/2 - 1) / dim_largura; else, fx = (-(dim_largura-1)/2 : (dim_largura-1)/2) / dim_largura; end
-if mod(total_frames, 2) == 0, ft = (-total_frames/2 : total_frames/2 - 1) / total_frames; else, ft = (-(total_frames-1)/2 : (total_frames-1)/2) / total_frames; end
+if mod(dim_altura, 2) == 0
+    fy = (-dim_altura/2 : dim_altura/2 - 1) / dim_altura;
+else
+    fy = (-(dim_altura-1)/2 : (dim_altura-1)/2) / dim_altura;
+end
 
-[X, Y, T] = meshgrid(fx, fy, ft); 
+if mod(dim_largura, 2) == 0
+    fx = (-dim_largura/2 : dim_largura/2 - 1) / dim_largura;
+else
+    fx = (-(dim_largura-1)/2 : (dim_largura-1)/2) / dim_largura;
+end
+
+if mod(total_frames, 2) == 0
+    ft = (-total_frames/2 : total_frames/2 - 1) / total_frames;
+else
+    ft = (-(total_frames-1)/2 : (total_frames-1)/2) / total_frames;
+end
+
+[X, Y, T] = meshgrid(fx, fy, ft);
 
 % Coleta apenas os pontos dominantes em escala log
 threshold = prctile(magnitude_log(:), 99);
@@ -133,7 +147,7 @@ for i = 1:length(espectro_tempo)
     maior_esq = (i == 1) || (espectro_tempo(i) >= espectro_tempo(i-1));
     % Verifica vizinho da direita (se existir)
     maior_dir = (i == length(espectro_tempo)) || (espectro_tempo(i) >= espectro_tempo(i+1));
-    
+
     if maior_esq && maior_dir
         picos(i) = espectro_tempo(i);
     end
@@ -143,17 +157,18 @@ end
 % CUIDADO: Valores em ponto flutuante na criação do vetor podem não ser exatamente 0.000...
 % Buscamos o índice mais próximo de zero por diferença absoluta.
 [~, idx_dc] = min(abs(ft));
-picos(idx_dc) = 0; % Zeramos o pico DC absoluto do nosso vetor de busca
+picos(idx_dc) = 0;
+% Zeramos o pico DC absoluto do nosso vetor de busca
 
-% Em matrizes pares, o zero da FFT não fica no centro exato matemático, 
+% Em matrizes pares, o zero da FFT não fica no centro exato matemático,
 % então por segurança zeramos também os 2 vizinhos contíguos do topo DC
 picos(idx_dc + 1) = 0;
 picos(max(1, idx_dc - 1)) = 0;
 
 % O próximo maior pico de energia restante é garantidamente a nossa Frequência Fundamental.
-% IMPORTANTE: Em vídeos sintéticos "puros" de flashes muito curtos (1 frame), os harmônicos 
-% gerados na FFT podem ter todos a mesmíssima energia máxima. A função max() comum traria 
-% apenas o "primeiro" vetor (a frequência mais negativa e errada).
+% IMPORTANTE: Em vídeos sintéticos "puros" de flashes muito curtos (1 frame),
+% os harmônicos gerados na FFT podem ter todos a mesmíssima energia máxima.
+% A função max() comum traria apenas o "primeiro" vetor (a frequência mais negativa e errada).
 [val_max, ~] = max(picos);
 
 % Encontramos todos os picos de energia que empatam no máximo (tolerância de precisão float)
@@ -164,7 +179,7 @@ idx_empatados = find(picos >= val_max * 0.999);
 loc_max = idx_empatados(i_min);
 
 % Associa o índice encontrado ao valor real da frequência convertendo pro eixo centralizado (ft)
-freq_fft_encontrada = abs(ft(loc_max)); 
+freq_fft_encontrada = abs(ft(loc_max));
 % =========================================================================
 
 figure('Name', 'Gerador Sintetico - FFT 3D Normal', 'Position', [150, 150, 800, 600]);
@@ -173,7 +188,7 @@ scatter3(X(idx), Y(idx), T(idx), 30, magnitude_log(idx), 'filled');
 xlabel('Freq. Espacial X');
 ylabel('Freq. Espacial Y');
 zlabel('Freq. Temporal Z');
-title(['Espectro FFT 3D Normal (Matriz ', num2str(dim_altura), 'x', num2str(dim_largura),...
+title(['Espectro FFT 3D Normal (Matriz ', num2str(dim_altura), 'x', num2str(dim_largura), ...
        ', Flash: ', num2str(frames_brancos), ' frame)']);
 colormap('jet');
 c = colorbar;
@@ -193,10 +208,13 @@ hold off;
 
 disp('-------------------------------------------------------------------------');
 disp('ANÁLISE DE FREQUÊNCIA:');
-disp([' A taxa de repeticao configurada no video foi de 1 flash a cada ', num2str(frames_por_ciclo), ' frames.']);
-disp([' Matematicamente, a frequencia temporal real esperada seria de: 1 / ', num2str(frames_por_ciclo), ' = ', num2str(1/frames_por_ciclo, '%.4f'), ' (Normalizada).']);
+disp([' A taxa de repeticao configurada no video foi de 1 flash a cada ', ...
+      num2str(frames_por_ciclo), ' frames.']);
+disp([' Matematicamente, a frequencia temporal real esperada seria de: 1 / ', ...
+      num2str(frames_por_ciclo), ' = ', num2str(1/frames_por_ciclo, '%.4f'), ' (Normalizada).']);
 disp(' ');
-disp([' ----> Frequencia Fundamental EXTRAIDA CEGAMENTE PELA FFT: ', num2str(freq_fft_encontrada, '%.4f')]);
+disp([' ----> Frequencia Fundamental EXTRAIDA CEGAMENTE PELA FFT: ', ...
+      num2str(freq_fft_encontrada, '%.4f')]);
 disp(' ');
 
 if abs(freq_fft_encontrada - (1/frames_por_ciclo)) < 1e-4
