@@ -22,7 +22,7 @@ slprj/
 # ===========================
 # Vídeos de entrada (binários pesados)
 # ===========================
-video_input/
+#video_input/
 
 # ===========================
 # Resultados gerados (imagens/plots exportados)

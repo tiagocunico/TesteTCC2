@@ -16,16 +16,21 @@ try; pkg load signal; catch; disp('AVISO: pkg signal nao encontrado'); end
 
 % Arquivo de vídeo
 pasta_video           = 'video_input';
-nome_arquivo          = 'Lento 1_17s.mp4';  % << MUDE O NOME DO VÍDEO
+nome_arquivo          = 'Rapido_1_5s.mp4';  % << MUDE O NOME DO VÍDEO
 fator_redimensionamento = 0.05;
 
 % Linhas do Kymograph (use visualizar_faixa.m para descobrir)
-LINHA_COM_SINAL = 2458;  % << linha com o sinal de interesse
-LINHA_SEM_SINAL = 3200;  % << linha sem sinal (referência)
+%Rapido
+ LINHA_COM_SINAL = 2458;  % << linha com o sinal de interesse
+ LINHA_SEM_SINAL = 3200;  % << linha sem sinal (referência)
+
+%Lento
+%LINHA_COM_SINAL = 4500;  % << AJUSTAR APÓS VER O GRÁFICO >>
+%LINHA_SEM_SINAL = 2299;   % << AJUSTAR APÓS VER O GRÁFICO >>
 
 % Filtro passa-faixa (fixo conforme solicitado pelo orientador)
 FREQ_BAIXA  = 0.1;   % Hz
-FREQ_ALTA   = 2.1;   % Hz
+FREQ_ALTA   = 2.5;   % Hz
 ORDEM_FILTRO = 5;    % Butterworth ordem 5
 
 % Ativar/desativar detecção de picos no tempo (true = ativa, false = desativa)
@@ -85,15 +90,34 @@ disp(['Filtro Butterworth ordem ', num2str(ORDEM_FILTRO), ' (', ...
 % -------------------------------------------------------------------------
 % FUNÇÃO: Filtra, calcula FFT e detecta pico
 % -------------------------------------------------------------------------
-function [s_filt, f_fft, espectro] = analisar(sinal, b, a, fps)
+function [s_filt, f_fft, espectro, confiabilidade] = analisar(sinal, b, a, fps)
     s = double(sinal(:)') - mean(sinal);
     try; s_filt = filtfilt(b, a, s); catch; s_filt = s; end
     N = length(s_filt);
     espectro = abs(fft(s_filt));
     espectro = espectro(1:floor(N/2));
-    busca = espectro; busca(1:2) = 0;
+    
+    % Zera APENAS o componente DC (0 Hz). Permite frequências muito baixas.
+    busca = espectro; 
+    busca(1) = 0;
+    
     [~, loc] = max(busca);
     f_fft = (loc - 1) * (fps / N);
+    
+    % --- Índice de Confiabilidade (Proporção de Variância Explicada) ---
+    % Calcula quanta variância do espectro é atribuída exclusivamente ao pico (0 a 100%)
+    variancia_total = var(busca);
+    
+    if variancia_total > 0
+        busca_sem_pico = busca;
+        idx_pico = max(3, loc-1) : min(length(busca), loc+1);
+        busca_sem_pico(idx_pico) = mean(busca); % Suaviza a área do pico para ver apenas o "ruído"
+        
+        variancia_ruido = var(busca_sem_pico);
+        confiabilidade = max(0, (1 - (variancia_ruido / variancia_total)) * 100);
+    else
+        confiabilidade = 0;
+    end
 end
 
 % -------------------------------------------------------------------------
@@ -130,15 +154,15 @@ sinal1 = mean(kymograph, 1);
 sinal2 = kymograph(LINHA_COM_SINAL, :);
 sinal3 = kymograph(LINHA_SEM_SINAL, :);
 
-[s1, f1, esp1] = analisar(sinal1, b, a, fps);
-[s2, f2, esp2] = analisar(sinal2, b, a, fps);
-[s3, f3, esp3] = analisar(sinal3, b, a, fps);
+[s1, f1, esp1, conf1] = analisar(sinal1, b, a, fps);
+[s2, f2, esp2, conf2] = analisar(sinal2, b, a, fps);
+[s3, f3, esp3, conf3] = analisar(sinal3, b, a, fps);
 
 disp(' ');
 disp('===== RESULTADOS FFT =====');
-disp(['Teste 1 (Imagem Inteira):              ' num2str(f1,'%.4f') ' Hz']);
-disp(['Teste 2 (Linha ' num2str(LINHA_COM_SINAL) ' - Com Sinal):    ' num2str(f2,'%.4f') ' Hz']);
-disp(['Teste 3 (Linha ' num2str(LINHA_SEM_SINAL) ' - Sem Sinal):   ' num2str(f3,'%.4f') ' Hz']);
+disp(['Teste 1 (Imagem Inteira):              ' num2str(f1,'%.4f') ' Hz  | Confiabilidade: ' num2str(conf1,'%.1f') '%']);
+disp(['Teste 2 (Linha ' num2str(LINHA_COM_SINAL) ' - Com Sinal):    ' num2str(f2,'%.4f') ' Hz  | Confiabilidade: ' num2str(conf2,'%.1f') '%']);
+disp(['Teste 3 (Linha ' num2str(LINHA_SEM_SINAL) ' - Sem Sinal):   ' num2str(f3,'%.4f') ' Hz  | Confiabilidade: ' num2str(conf3,'%.1f') '%']);
 if DETECTAR_PICOS
     disp(' ');
     disp('===== RESULTADOS PICOS (dominio do tempo) =====');
@@ -167,7 +191,7 @@ title('Teste 1: Sinal Filtrado (Imagem Inteira)');
 xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
 
 subplot(3,2,2); bar(vf(1:Nh), esp1,'b');
-title(['FFT Teste 1 | Pico: ' num2str(f1,'%.3f') ' Hz']);
+title(['FFT Teste 1 | Pico: ' num2str(f1,'%.3f') ' Hz (Conf: ' num2str(conf1,'%.1f') '%)']);
 xlabel('Frequência (Hz)'); ylabel('Magnitude'); grid on; xlim(xl);
 
 % Linha 2
@@ -176,7 +200,7 @@ title(['Teste 2: Linha ' num2str(LINHA_COM_SINAL) ' (Com Sinal)']);
 xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
 
 subplot(3,2,4); bar(vf(1:Nh), esp2,'g');
-title(['FFT Teste 2 | Pico: ' num2str(f2,'%.3f') ' Hz']);
+title(['FFT Teste 2 | Pico: ' num2str(f2,'%.3f') ' Hz (Conf: ' num2str(conf2,'%.1f') '%)']);
 xlabel('Frequência (Hz)'); ylabel('Magnitude'); grid on; xlim(xl);
 
 % Linha 3
@@ -185,7 +209,7 @@ title(['Teste 3: Linha ' num2str(LINHA_SEM_SINAL) ' (Sem Sinal)']);
 xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
 
 subplot(3,2,6); bar(vf(1:Nh), esp3,'r');
-title(['FFT Teste 3 | Pico: ' num2str(f3,'%.3f') ' Hz']);
+title(['FFT Teste 3 | Pico: ' num2str(f3,'%.3f') ' Hz (Conf: ' num2str(conf3,'%.1f') '%)']);
 xlabel('Frequência (Hz)'); ylabel('Magnitude'); grid on; xlim(xl);
 
 disp('Concluido! Pressione enter no terminal para fechar.');
