@@ -79,3 +79,45 @@ disp(' 4 - Feche esta janela e anote o numero para usar no script Principal!');
 disp('-------------------------------------------------------------------------');
 
 pause; % Espera no terminal para não fechar a janela abruptamente
+clear all; close all; clc;
+
+fs = 20;            % Frequência de amostragem (FPS do seu vídeo)
+T_total = 10;       % Tempo total em segundos
+Ts = 1/fs;
+t = 0:Ts:T_total-Ts;
+N = length(t);
+
+% Resolução da FFT (O "passo" real da sua análise)
+delta_f = 1/T_total; 
+
+x = zeros(1,N);
+
+% CORREÇÃO: Passo do loop igual à resolução da FFT (0.1 Hz)
+for f = 0.1 : delta_f : 2.5
+    if abs(f - 1.0) < 0.01  % Destaca a frequência de 1Hz (simulando a gota)
+        k = 1;
+    else
+        k = 0.1;            % Outras frequências como ruído de fundo menor
+    end
+    
+    % Gerando a senoide limpa (sem fase aleatória para teste inicial)
+    x = x + k * sin(2 * pi * f * t);
+end
+
+% Janelamento (Opcional, mas ajuda muito na vida real) [cite: 316, 382]
+% w = hamming(N);
+% x = x .* w';
+
+X = fft(x);
+eixo_f = (0:N-1) * (fs/N);
+
+subplot(2,1,1);
+plot(t, x);
+title('Sinal no Tempo (Soma de Senoides)');
+xlabel('Tempo (s)');
+
+subplot(2,1,2);
+% Mostra apenas até fs/2 (Nyquist) [cite: 289, 391]
+stem(eixo_f(1:floor(N/2)), abs(X(1:floor(N/2))));
+title(['Espectro de Frequência - Resolução: ', num2str(delta_f), ' Hz']);
+xlabel('Frequência (Hz)');

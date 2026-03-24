@@ -16,7 +16,7 @@ try; pkg load signal; catch; disp('AVISO: pkg signal nao encontrado'); end
 
 % Arquivo de vídeo
 pasta_video           = 'video_input';
-nome_arquivo          = 'Rapido_1_5s.mp4';  % << MUDE O NOME DO VÍDEO
+nome_arquivo          = 'Rapido 1.mp4';  % << MUDE O NOME DO VÍDEO
 fator_redimensionamento = 0.05;
 
 % Linhas do Kymograph (use visualizar_faixa.m para descobrir)
