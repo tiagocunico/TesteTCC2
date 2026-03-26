@@ -16,12 +16,12 @@ try; pkg load signal; catch; disp('AVISO: pkg signal nao encontrado'); end
 % =========================================================================
 
 % Pasta contendo os vídeos
-pasta_alvo = 'video_input/VideosContados/L1';
+pasta_alvo = 'video_input/VideosContados/R2';
 
 % Filtro passa-faixa (Fixo conforme desejado)
 FREQ_BAIXA  = 0.1;   % Hz
 FREQ_ALTA   = 2.5;   % Hz
-ORDEM_FILTRO = 2;    % Butterworth ordem 5
+ORDEM_FILTRO = 4;    % Butterworth ordem 5
 
 % =========================================================================
 % VARIÁVEIS DO FILTRO DINÂMICO
@@ -79,6 +79,7 @@ gotas_array = [infos(idx_sort).gotas];
 % FUNÇÃO DE ANÁLISE (Otimizada sem remover limites para baixar memoria)
 % -------------------------------------------------------------------------
 function [s_filt, f_fft, espectro, confiabilidade] = analisar(sinal, b, a, fps)
+    %s_filt = double(sinal(:)') - mean(sinal);
     s = double(sinal(:)') - mean(sinal);
     try; s_filt = filtfilt(b, a, s); catch; s_filt = s; end
     N = length(s_filt);
@@ -157,13 +158,12 @@ for i = 1:QTD_VIDEOS
         freq_alta_uso  = FREQ_ALTA;
     end
     
-    % Filtro Butterworth auto-ajustável
+    % Filtro Butterworth
     f_nyq = fps / 2;
     freq_norm = [freq_baixa_uso freq_alta_uso] / f_nyq;
     [b, a] = butter(ORDEM_FILTRO, freq_norm, 'bandpass');
     if any(abs(roots(a)) >= 1)
-        disp('  > Filtro instavel (reduzindo para ordem 2)');
-        [b, a] = butter(2, freq_norm, 'bandpass');
+        disp(['  > AVISO: Filtro instavel na ordem ' num2str(ORDEM_FILTRO) ' (mantendo a ordem conforme solicitado)']);
     end
     disp(['  > Filtro Aplicado: ' num2str(freq_baixa_uso, '%.3f') ' a ' num2str(freq_alta_uso, '%.3f') ' Hz']);
     
@@ -194,7 +194,8 @@ for i = 1:QTD_VIDEOS
     xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
     
     subplot(QTD_VIDEOS, 2, i*2);
-    bar(vf(1:Nh), esp, 'b');
+    %plot(vf(1:Nh)), esp, 'b');
+    plot(vf(1:Nh), esp, 'b');
     
     if ~isnan(freq_esperada)
         erro_perc = abs(f_pico - freq_esperada) / freq_esperada * 100;
