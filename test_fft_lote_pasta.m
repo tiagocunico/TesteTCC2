@@ -16,7 +16,7 @@ try; pkg load signal; catch; disp('AVISO: pkg signal nao encontrado'); end
 % =========================================================================
 
 % Pasta contendo os vídeos
-pasta_alvo = 'video_input/VideosContados/R2';
+pasta_alvo = 'video_input/VideosContados/L1';
 
 % Filtro passa-faixa (Fixo conforme desejado)
 FREQ_BAIXA  = 0.1;   % Hz
@@ -106,6 +106,9 @@ end
 % LOOP EM TODOS OS VÍDEOS
 % -------------------------------------------------------------------------
 QTD_VIDEOS = length(nomes);
+
+% Estrutura para salvar os sinais brutos e filtrados de cada vídeo
+resultados_sinais = struct();
 
 % Cria uma única janela alta o suficiente para acomodar todos os gráficos
 altura_janela = max(400, QTD_VIDEOS * 250);
@@ -208,10 +211,29 @@ for i = 1:QTD_VIDEOS
     title(texto_title, 'FontSize', 10);
     
     xlabel('Frequencia (Hz)'); ylabel('Magnitude'); grid on; xlim(xl);
+    
+    % Armazena os dados brutos e processados para exportacao
+    resultados_sinais(i).nome_arquivo = nome_arq;
+    resultados_sinais(i).fps = fps;
+    resultados_sinais(i).sinal_bruto_absoluto = sinal_inteiro;
+    resultados_sinais(i).sinal_filtrado = s_filt;
 end
 
 disp('---------------------------------------------------------');
 disp('Processamento em lote concluido! ');
+disp('Processamento em lote concluido! ');
 disp('Verifique a janela gerada.');
 disp('Pressione enter no terminal para fechar tudo e sair.');
+
+% Limpa possíveis barras no final do caminho (ex: "L1/") para não bugar o nome
+pasta_limpa = regexprep(pasta_alvo, '[/\\]$', '');
+[~, nome_pasta, ~] = fileparts(pasta_limpa); 
+
+nome_arquivo_mat = sprintf('SinaisComFiltro_%s.mat', nome_pasta);
+disp(['Salvando os sinais de todos os vídeos em: ' nome_arquivo_mat ' ...']);
+
+% Salva a variavel 'resultados_sinais' no arquivo
+save('-v7', nome_arquivo_mat, 'resultados_sinais');
+disp('Sinais salvos com sucesso!');
+
 pause;
