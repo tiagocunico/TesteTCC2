@@ -19,8 +19,8 @@ try; pkg load signal; catch; disp('AVISO: pkg signal nao encontrado'); end
 %   <<< CONFIGURAÇÕES (EDITE AQUI) >>>
 % =========================================================================
 
-% Pasta contendo os vídeos e os arquivos .mat
-pasta_alvo = 'video_input/VideosContados/L1';
+% Pasta contendo os vídeos e os arquivos .mat 
+pasta_alvo = 'video_input/VideosContados/R2';
 
 % Filtro passa-faixa (Fixo, usado quando não se conhece a freq esperada)
 FREQ_BAIXA  = 0.1;   % Hz
@@ -32,6 +32,14 @@ MARGEM_DINAMICA = 0.20;
 
 % FPS assumido para os sinais do .mat KLT
 FPS_MAT = 30;
+
+% =========================================================================
+% CONTROLE DE VISIBILIDADE NA FIGURA CONSOLIDADA
+% =========================================================================
+% Mude para false para esconder um sinal e rodar novamente (usa cache, instantaneo)
+MOSTRAR_VIDEO   = true;
+MOSTRAR_KLT_MAX = true;
+MOSTRAR_KLT_DIR = true;
 
 % =========================================================================
 
@@ -165,7 +173,8 @@ if usar_cache
         subplot(QTD_VIDEOS, 2, i*2 - 1);
         plot(t_vetor, s_filt, 'b', 'LineWidth', 1.5);
         title(['Sinal Filtrado - ' nome_arq]);
-        xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
+        %xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
+        xlabel(''); ylabel('Amplitude'); grid on;
 
         subplot(QTD_VIDEOS, 2, i*2);
         plot(vf(1:Nh), esp, 'b');
@@ -178,7 +187,8 @@ if usar_cache
                            ['Filtro: [' num2str(freq_baixa_uso,'%.2f') ' - ' num2str(freq_alta_uso,'%.2f') ' Hz]']};
         end
         title(texto_title, 'FontSize', 10);
-        xlabel('Frequencia (Hz)'); ylabel('Magnitude'); grid on; xlim(xl);
+        %xlabel('Frequencia (Hz)'); ylabel('Magnitude'); grid on; xlim(xl);
+        xlabel(''); ylabel('Magnitude'); grid on; xlim(xl);
 
         disp(['  [Cache] ' nome_arq ' | Pico: ' num2str(f_pico,'%.4f') ' Hz | Conf: ' num2str(conf,'%.1f') '%']);
     end
@@ -305,7 +315,8 @@ else
         subplot(QTD_VIDEOS, 2, i*2 - 1);
         plot(t_vetor, s_filt, 'b', 'LineWidth', 1.5);
         title(['Sinal Filtrado - ' nome_arq]);
-        xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
+        %xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
+        xlabel(''); ylabel('Amplitude'); grid on;
 
         subplot(QTD_VIDEOS, 2, i*2);
         plot(vf(1:Nh), esp, 'b');
@@ -318,7 +329,8 @@ else
                            ['Filtro: [' num2str(freq_baixa_uso,'%.2f') ' - ' num2str(freq_alta_uso,'%.2f') ' Hz]']};
         end
         title(texto_title, 'FontSize', 10);
-        xlabel('Frequencia (Hz)'); ylabel('Magnitude'); grid on; xlim(xl);
+        %xlabel('Frequencia (Hz)'); ylabel('Magnitude'); grid on; xlim(xl);
+        xlabel(''); ylabel('Magnitude'); grid on; xlim(xl);
 
         % Armazena
         resultados_sinais(i).nome_arquivo = nome_arq;
@@ -455,13 +467,15 @@ for sig_idx = 1:length(sinais_klt)
         subplot(QTD_VIDEOS, 3, (i-1)*3 + 1);
         plot(t_klt, sinal_bruto, 'Color', [0.5 0.5 0.5], 'LineWidth', 1.0);
         title({[label_sinal ' Bruto - ' nome_arq], info_freq}, 'FontSize', 9, 'Interpreter', 'none');
-        xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
+        %xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
+        xlabel(''); ylabel('Amplitude'); grid on;
 
         % --- Subplot 2: Sinal Filtrado ---
         subplot(QTD_VIDEOS, 3, (i-1)*3 + 2);
         plot(t_klt, s_filt_klt, 'Color', cor_sinal, 'LineWidth', 1.2);
         title({[label_sinal ' Filtrado - ' nome_arq], ['Filtro: ' info_filtro]}, 'FontSize', 9, 'Interpreter', 'none');
-        xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
+        %xlabel('Tempo (s)'); ylabel('Amplitude'); grid on;
+        xlabel(''); ylabel('Amplitude'); grid on;
 
         % --- Subplot 3: FFT ---
         subplot(QTD_VIDEOS, 3, (i-1)*3 + 3);
@@ -474,7 +488,8 @@ for sig_idx = 1:length(sinais_klt)
                           ['Filtro: ' info_filtro]};
         end
         title(titulo_fft, 'FontSize', 9, 'Interpreter', 'none');
-        xlabel('Frequencia (Hz)'); ylabel('Magnitude'); grid on;
+        %xlabel('Frequencia (Hz)'); ylabel('Magnitude'); grid on;
+        xlabel(''); ylabel('Magnitude'); grid on;
         xlim(xl_klt);
     end
 
@@ -485,6 +500,365 @@ for sig_idx = 1:length(sinais_klt)
 end
 
 % =========================================================================
+% PARTE 3: FIGURA CONSOLIDADA (Video + KLT Max + KLT Directed sobrepostos)
+% =========================================================================
+disp('');
+disp('=========================================================');
+disp('GERANDO FIGURA CONSOLIDADA (Comparacao Normalizada) ...');
+disp('=========================================================');
+
+% Pré-carrega os dados dos 3 sinais para cada vídeo
+% Estruturas: cell arrays {QTD_VIDEOS} com os sinais processados
+vid_bruto_norm  = cell(1, QTD_VIDEOS);
+vid_filt_norm   = cell(1, QTD_VIDEOS);
+vid_fft_norm    = cell(1, QTD_VIDEOS);
+vid_t           = cell(1, QTD_VIDEOS);
+vid_f           = cell(1, QTD_VIDEOS);
+
+klt_max_bruto_norm  = cell(1, QTD_VIDEOS);
+klt_max_filt_norm   = cell(1, QTD_VIDEOS);
+klt_max_fft_norm    = cell(1, QTD_VIDEOS);
+klt_max_t           = cell(1, QTD_VIDEOS);
+klt_max_f           = cell(1, QTD_VIDEOS);
+
+klt_dir_bruto_norm  = cell(1, QTD_VIDEOS);
+klt_dir_filt_norm   = cell(1, QTD_VIDEOS);
+klt_dir_fft_norm    = cell(1, QTD_VIDEOS);
+klt_dir_t           = cell(1, QTD_VIDEOS);
+klt_dir_f           = cell(1, QTD_VIDEOS);
+
+% Arrays para guardar pico/erro/conf de cada sinal (para legend)
+vid_pico = zeros(1, QTD_VIDEOS); vid_conf = zeros(1, QTD_VIDEOS); vid_erro = zeros(1, QTD_VIDEOS);
+klt_max_pico = zeros(1, QTD_VIDEOS); klt_max_conf = zeros(1, QTD_VIDEOS); klt_max_erro = zeros(1, QTD_VIDEOS);
+klt_dir_pico = zeros(1, QTD_VIDEOS); klt_dir_conf = zeros(1, QTD_VIDEOS); klt_dir_erro = zeros(1, QTD_VIDEOS);
+
+for i = 1:QTD_VIDEOS
+    % --- Sinal do Vídeo ---
+    fps_vid = resultados_sinais(i).fps;
+    sinal_vid = resultados_sinais(i).sinal_bruto_absoluto;
+    Nt_vid = length(sinal_vid);
+    vid_t{i} = (0:Nt_vid-1) / fps_vid;
+
+    % Normaliza bruto (z-score)
+    mu = mean(sinal_vid); sd = std(sinal_vid);
+    if sd > 0; vid_bruto_norm{i} = (sinal_vid - mu) / sd;
+    else; vid_bruto_norm{i} = sinal_vid - mu; end
+
+    % Filtrado
+    freq_baixa_uso = freq_baixa_arr(i);
+    freq_alta_uso  = freq_alta_arr(i);
+    freq_esperada  = freq_esperada_arr(i);
+    f_nyq = fps_vid / 2;
+    freq_norm_v = [freq_baixa_uso freq_alta_uso] / f_nyq;
+    [b, a] = butter(ORDEM_FILTRO, freq_norm_v, 'bandpass');
+    [s_filt_vid, pico_v, esp_vid, conf_v] = analisar(sinal_vid, b, a, fps_vid);
+    vid_pico(i) = pico_v; vid_conf(i) = conf_v;
+    if ~isnan(freq_esperada) && freq_esperada > 0
+        vid_erro(i) = abs(pico_v - freq_esperada) / freq_esperada * 100;
+    else; vid_erro(i) = NaN; end
+
+    mu = mean(s_filt_vid); sd = std(s_filt_vid);
+    if sd > 0; vid_filt_norm{i} = (s_filt_vid - mu) / sd;
+    else; vid_filt_norm{i} = s_filt_vid - mu; end
+
+    % FFT normalizada (pico = 1)
+    Nh_vid = floor(Nt_vid / 2);
+    vid_f{i} = (0:Nh_vid-1) * (fps_vid / Nt_vid);
+    mx = max(esp_vid);
+    if mx > 0; vid_fft_norm{i} = esp_vid / mx;
+    else; vid_fft_norm{i} = esp_vid; end
+
+    % --- Sinais KLT ---
+    [~, base_video, ~] = fileparts(nomes{i});
+
+    % Busca o .mat correspondente
+    nome_mat_encontrado = '';
+    for k = 1:length(nomes_mat)
+        if ~isempty(strfind(nomes_mat{k}, base_video))
+            nome_mat_encontrado = nomes_mat{k};
+            break;
+        end
+    end
+
+    if ~isempty(nome_mat_encontrado)
+        caminho_mat = fullfile(pasta_alvo, nome_mat_encontrado);
+        dados_mat = [];
+        load_ok = false;
+        try; dados_mat = load(caminho_mat); load_ok = true; catch; end
+        if ~load_ok; try; dados_mat = load('-v7', caminho_mat); load_ok = true; catch; end; end
+        if ~load_ok; try; dados_mat = load('-hdf5', caminho_mat); load_ok = true; catch; end; end
+
+        if load_ok
+            freq_baixa_uso = freq_baixa_arr(i);
+            freq_alta_uso  = freq_alta_arr(i);
+            f_nyq_klt = FPS_MAT / 2;
+            freq_norm_k = [freq_baixa_uso freq_alta_uso] / f_nyq_klt;
+            [b_k, a_k] = butter(ORDEM_FILTRO, freq_norm_k, 'bandpass');
+
+            % KLT Max
+            if isfield(dados_mat, 'klt_max')
+                sig = double(dados_mat.klt_max(:)');
+                N_k = length(sig);
+                klt_max_t{i} = (0:N_k-1) / FPS_MAT;
+
+                mu = mean(sig); sd = std(sig);
+                if sd > 0; klt_max_bruto_norm{i} = (sig - mu) / sd;
+                else; klt_max_bruto_norm{i} = sig - mu; end
+
+                [sf, pico_km, ef, conf_km] = analisar(sig, b_k, a_k, FPS_MAT);
+                klt_max_pico(i) = pico_km; klt_max_conf(i) = conf_km;
+                if ~isnan(freq_esperada_arr(i)) && freq_esperada_arr(i) > 0
+                    klt_max_erro(i) = abs(pico_km - freq_esperada_arr(i)) / freq_esperada_arr(i) * 100;
+                else; klt_max_erro(i) = NaN; end
+
+                mu = mean(sf); sd = std(sf);
+                if sd > 0; klt_max_filt_norm{i} = (sf - mu) / sd;
+                else; klt_max_filt_norm{i} = sf - mu; end
+
+                Nh_k = floor(N_k / 2);
+                klt_max_f{i} = (0:Nh_k-1) * (FPS_MAT / N_k);
+                mx = max(ef);
+                if mx > 0; klt_max_fft_norm{i} = ef / mx;
+                else; klt_max_fft_norm{i} = ef; end
+            end
+
+            % KLT Directed
+            if isfield(dados_mat, 'klt_directed')
+                sig = double(dados_mat.klt_directed(:)');
+                N_k = length(sig);
+                klt_dir_t{i} = (0:N_k-1) / FPS_MAT;
+
+                mu = mean(sig); sd = std(sig);
+                if sd > 0; klt_dir_bruto_norm{i} = (sig - mu) / sd;
+                else; klt_dir_bruto_norm{i} = sig - mu; end
+
+                [sf, pico_kd, ef, conf_kd] = analisar(sig, b_k, a_k, FPS_MAT);
+                klt_dir_pico(i) = pico_kd; klt_dir_conf(i) = conf_kd;
+                if ~isnan(freq_esperada_arr(i)) && freq_esperada_arr(i) > 0
+                    klt_dir_erro(i) = abs(pico_kd - freq_esperada_arr(i)) / freq_esperada_arr(i) * 100;
+                else; klt_dir_erro(i) = NaN; end
+
+                mu = mean(sf); sd = std(sf);
+                if sd > 0; klt_dir_filt_norm{i} = (sf - mu) / sd;
+                else; klt_dir_filt_norm{i} = sf - mu; end
+
+                Nh_k = floor(N_k / 2);
+                klt_dir_f{i} = (0:Nh_k-1) * (FPS_MAT / N_k);
+                mx = max(ef);
+                if mx > 0; klt_dir_fft_norm{i} = ef / mx;
+                else; klt_dir_fft_norm{i} = ef; end
+            end
+        end
+    end
+end
+
+% --- Função auxiliar para montar string de info compacta ---
+function txt = info_sinal(nome, pico, erro, conf)
+    if isnan(erro)
+        txt = sprintf('%s: P=%.3f C=%.0f%%', nome, pico, conf);
+    else
+        txt = sprintf('%s: P=%.3f E=%.1f%% C=%.0f%%', nome, pico, erro, conf);
+    end
+end
+
+% --- Plotagem da figura consolidada (margens reduzidas) ---
+fig_cons = figure('Name', ['COMPARACAO - ' pasta_alvo], ...
+                  'Position', [10, 10, 1900, max(1000, QTD_VIDEOS * 450)]);
+
+cores_comp = {'b', 'r', [0 0.6 0]};  % Video=azul, KLT Max=vermelho, KLT Dir=verde
+
+% Layout manual: margens apertadas mas com espaço pros textos
+margem_esq   = 0.05;   % Aumentado levemente para o ylabel não sumir
+margem_dir   = 0.02;   
+margem_top   = 0.04;   
+margem_bot   = 0.05;   % Aumentado levemente para o xlabel não sumir
+gap_h        = 0.03;   % Espaço entre colunas
+gap_v        = 0.05;   % Espaço entre linhas
+FONTE_TITULO = 12;     % Tamanho da fonte dos títulos (Bruto / Filtrado)
+FONTE_INFO   = 9;      % Tamanho da fonte do título da FFT (texto longo)
+FONTE_EIXO   = 9;      % Tamanho da fonte dos eixos e legenda
+n_cols = 3;
+n_rows = QTD_VIDEOS;
+larg_plot = (1 - margem_esq - margem_dir - gap_h*(n_cols-1)) / n_cols;
+alt_plot  = (1 - margem_top - margem_bot - gap_v*(n_rows-1)) / n_rows;
+
+for i = 1:QTD_VIDEOS
+    nome_arq = nomes{i};
+    freq_esperada = freq_esperada_arr(i);
+    freq_alta_uso = freq_alta_arr(i);
+    freq_baixa_uso = freq_baixa_arr(i);
+    xl_cons = [0, freq_alta_uso * 1.5];
+
+    % Monta strings de info para a FFT
+    info_v  = info_sinal('Vid',  vid_pico(i),     vid_erro(i),     vid_conf(i));
+    info_km = info_sinal('Max',  klt_max_pico(i), klt_max_erro(i), klt_max_conf(i));
+    info_kd = info_sinal('Dir',  klt_dir_pico(i), klt_dir_erro(i), klt_dir_conf(i));
+    linha_info = [info_v ' | ' info_km ' | ' info_kd];
+
+    str_filtro = sprintf('Filtro: [%.2f - %.2f Hz]', freq_baixa_uso, freq_alta_uso);
+    if ~isnan(freq_esperada)
+        str_fft_tit = sprintf('FFT - Esp: %.3f Hz', freq_esperada);
+    else
+        str_fft_tit = 'FFT';
+    end
+
+    % OuterPosition: divide o espaço total (título + eixos + xlabel) igualmente
+    outer_h = (1 - margem_top - margem_bot) / n_rows;
+    outer_y = 1 - margem_top - i * outer_h;
+    outer_w = (1 - margem_esq - margem_dir) / n_cols;  % Largura uniforme por coluna
+
+    pos_y = 1 - margem_top - i*alt_plot - (i-1)*gap_v;
+
+    % ===== COLUNA 1: Sinais Brutos (z-score) =====
+    pos_x1 = margem_esq;
+    subplot(QTD_VIDEOS, 3, (i-1)*3 + 1);
+    set(gca, 'Position', [pos_x1, pos_y, larg_plot, alt_plot]);
+    hold on;
+    h_leg = []; leg_txt = {};
+
+    if MOSTRAR_VIDEO && ~isempty(vid_bruto_norm{i})
+        h_leg(end+1) = plot(vid_t{i}, vid_bruto_norm{i}, 'Color', cores_comp{1}, 'LineWidth', 1.2);
+        leg_txt{end+1} = 'Video';
+    end
+    if MOSTRAR_KLT_MAX && ~isempty(klt_max_bruto_norm{i})
+        h_leg(end+1) = plot(klt_max_t{i}, klt_max_bruto_norm{i}, 'Color', cores_comp{2}, 'LineWidth', 1.0);
+        leg_txt{end+1} = 'KLT Max';
+    end
+    if MOSTRAR_KLT_DIR && ~isempty(klt_dir_bruto_norm{i})
+        h_leg(end+1) = plot(klt_dir_t{i}, klt_dir_bruto_norm{i}, 'Color', cores_comp{3}, 'LineWidth', 1.0);
+        leg_txt{end+1} = 'KLT Dir';
+    end
+    hold off;
+    title(['Bruto - ' nome_arq], 'FontSize', FONTE_TITULO, 'Interpreter', 'none');
+    %xlabel('Tempo (s)'); ylabel('Z-score'); grid on;
+    xlabel(''); ylabel('Z-score'); grid on;
+    set(gca, 'FontSize', FONTE_EIXO);
+    if ~isempty(h_leg); legend(h_leg, leg_txt, 'Location', 'northeast', 'FontSize', FONTE_EIXO); end
+
+    % ===== COLUNA 2: Sinais Filtrados (z-score) =====
+    pos_x2 = margem_esq + larg_plot + gap_h;
+    subplot(n_rows, n_cols, (i-1)*3 + 2);
+    set(gca, 'Position', [pos_x2, pos_y, larg_plot, alt_plot]);
+    hold on;
+    h_leg = []; leg_txt = {};
+
+    if MOSTRAR_VIDEO && ~isempty(vid_filt_norm{i})
+        h_leg(end+1) = plot(vid_t{i}, vid_filt_norm{i}, 'Color', cores_comp{1}, 'LineWidth', 1.2);
+        leg_txt{end+1} = 'Video';
+    end
+    if MOSTRAR_KLT_MAX && ~isempty(klt_max_filt_norm{i})
+        h_leg(end+1) = plot(klt_max_t{i}, klt_max_filt_norm{i}, 'Color', cores_comp{2}, 'LineWidth', 1.0);
+        leg_txt{end+1} = 'KLT Max';
+    end
+    if MOSTRAR_KLT_DIR && ~isempty(klt_dir_filt_norm{i})
+        h_leg(end+1) = plot(klt_dir_t{i}, klt_dir_filt_norm{i}, 'Color', cores_comp{3}, 'LineWidth', 1.0);
+        leg_txt{end+1} = 'KLT Dir';
+    end
+    hold off;
+    title(str_filtro, 'FontSize', FONTE_TITULO, 'Interpreter', 'none');
+    %xlabel('Tempo (s)'); ylabel('Z-score'); grid on;
+    xlabel(''); ylabel('Z-score'); grid on;
+    set(gca, 'FontSize', FONTE_EIXO);
+    if ~isempty(h_leg); legend(h_leg, leg_txt, 'Location', 'northeast', 'FontSize', FONTE_EIXO); end
+
+    % ===== COLUNA 3: FFT (normalizada ao pico = 1.0) =====
+    pos_x3 = margem_esq + 2*(larg_plot + gap_h);
+    subplot(n_rows, n_cols, (i-1)*3 + 3);
+    set(gca, 'Position', [pos_x3, pos_y, larg_plot, alt_plot]);
+    hold on;
+    h_leg = []; leg_txt = {};
+
+    if MOSTRAR_VIDEO && ~isempty(vid_fft_norm{i})
+        h_leg(end+1) = plot(vid_f{i}, vid_fft_norm{i}, 'Color', cores_comp{1}, 'LineWidth', 1.2);
+        leg_txt{end+1} = 'Video';
+    end
+    if MOSTRAR_KLT_MAX && ~isempty(klt_max_fft_norm{i})
+        h_leg(end+1) = plot(klt_max_f{i}, klt_max_fft_norm{i}, 'Color', cores_comp{2}, 'LineWidth', 1.0);
+        leg_txt{end+1} = 'KLT Max';
+    end
+    if MOSTRAR_KLT_DIR && ~isempty(klt_dir_fft_norm{i})
+        h_leg(end+1) = plot(klt_dir_f{i}, klt_dir_fft_norm{i}, 'Color', cores_comp{3}, 'LineWidth', 1.0);
+        leg_txt{end+1} = 'KLT Dir';
+    end
+    hold off;
+    title([str_fft_tit ' | ' linha_info], 'FontSize', FONTE_INFO, 'Interpreter', 'none');
+    %xlabel('Frequencia (Hz)'); ylabel('Magnitude Norm.'); grid on;
+    xlabel(''); ylabel('Magnitude Norm.'); grid on;
+    xlim(xl_cons);
+    set(gca, 'FontSize', FONTE_EIXO);
+    if ~isempty(h_leg); legend(h_leg, leg_txt, 'Location', 'northeast', 'FontSize', FONTE_EIXO); end
+end
+
+% Salva automaticamente como PNG de alta resolução
+nome_img = sprintf('Comparacao_%s.png', nome_pasta);
+print(fig_cons, nome_img, '-dpng', '-r200');
+disp(['Imagem salva: ' nome_img ' (200 DPI)']);
+
+disp('Figura consolidada gerada com sucesso!');
+sinais_ativos = {};
+if MOSTRAR_VIDEO; sinais_ativos{end+1} = 'Video'; end
+if MOSTRAR_KLT_MAX; sinais_ativos{end+1} = 'KLT Max'; end
+if MOSTRAR_KLT_DIR; sinais_ativos{end+1} = 'KLT Dir'; end
+disp(['Sinais ativos: ' strjoin(sinais_ativos, ', ')]);
+disp('DICA: Mude MOSTRAR_VIDEO/MOSTRAR_KLT_MAX/MOSTRAR_KLT_DIR no topo do script para esconder sinais.');
+
+% =========================================================================
+% EXPORTAÇÃO DE RESULTADOS PARA ANÁLISE CRUZADA
+% =========================================================================
+disp('');
+disp('Salvando resultados em .mat para analise cruzada...');
+
+% Constrói struct array com um registro por vídeo
+registros = struct();
+for i = 1:QTD_VIDEOS
+    registros(i).nome_arquivo  = nomes{i};
+    registros(i).gotas         = gotas_array(i);
+    registros(i).freq_esperada = freq_esperada_arr(i);
+    registros(i).freq_baixa    = freq_baixa_arr(i);
+    registros(i).freq_alta     = freq_alta_arr(i);
+
+    % --- Vídeo ---
+    registros(i).video.f_vetor    = vid_f{i};
+    registros(i).video.fft_norm   = vid_fft_norm{i};
+    registros(i).video.pico       = vid_pico(i);
+    registros(i).video.erro_perc  = vid_erro(i);
+    registros(i).video.conf       = vid_conf(i);
+
+    % --- KLT Max ---
+    registros(i).klt_max.f_vetor   = klt_max_f{i};
+    registros(i).klt_max.fft_norm  = klt_max_fft_norm{i};
+    registros(i).klt_max.pico      = klt_max_pico(i);
+    registros(i).klt_max.erro_perc = klt_max_erro(i);
+    registros(i).klt_max.conf      = klt_max_conf(i);
+
+    % --- KLT Directed ---
+    registros(i).klt_dir.f_vetor   = klt_dir_f{i};
+    registros(i).klt_dir.fft_norm  = klt_dir_fft_norm{i};
+    registros(i).klt_dir.pico      = klt_dir_pico(i);
+    registros(i).klt_dir.erro_perc = klt_dir_erro(i);
+    registros(i).klt_dir.conf      = klt_dir_conf(i);
+end
+
+% Metadados globais do lote
+meta.pasta       = pasta_alvo;
+meta.nome_pasta  = nome_pasta;
+meta.fps_mat     = FPS_MAT;
+meta.n_videos    = QTD_VIDEOS;
+meta.gerado_em   = datestr(now, 'yyyy-mm-dd HH:MM:SS');
+
+% Garante que a pasta de saída existe
+pasta_saida = 'Resultados/EmLote';
+if ~exist(pasta_saida, 'dir')
+    mkdir(pasta_saida);
+end
+
+% Salva o .mat
+nome_resultado = sprintf('%s/Resultado_%s.mat', pasta_saida, nome_pasta);
+save(nome_resultado, 'registros', 'meta');
+disp(['Resultados salvos em: ' nome_resultado]);
+disp(['  -> ' num2str(QTD_VIDEOS) ' videos | Pasta: ' nome_pasta]);
+
+% =========================================================================
 % FINALIZAÇÃO
 % =========================================================================
 disp('---------------------------------------------------------');
@@ -492,3 +866,4 @@ disp('Processamento completo!');
 disp('Verifique as janelas geradas.');
 disp('Pressione Enter no terminal para fechar tudo e sair.');
 pause;
+
